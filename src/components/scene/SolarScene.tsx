@@ -8,7 +8,9 @@ import { qualitySettings } from "@/lib/quality";
 import { useApp } from "@/lib/store";
 import { AsteroidBelt } from "./AsteroidBelt";
 import { CameraRig } from "./CameraRig";
+import { Comet } from "./Comet";
 import { Effects } from "./Effects";
+import { LensFlare } from "./LensFlare";
 import { Nebula } from "./Nebula";
 import { OrbitLines } from "./OrbitLines";
 import { Planet } from "./Planet";
@@ -16,8 +18,10 @@ import { Simulation } from "./Simulation";
 import { SpaceDust } from "./SpaceDust";
 import { Starfield } from "./Starfield";
 import { Sun } from "./Sun";
+import { WarpStreaks } from "./WarpStreaks";
+import { ZodiacalLight } from "./ZodiacalLight";
 
-const PLANETS = BODY_ORDER.filter((id) => id !== "sun" && id !== "belt").map((id) => BODIES[id]);
+const PLANETS = BODY_ORDER.filter((id) => id !== "sun" && id !== "belt" && id !== "comet").map((id) => BODIES[id]);
 
 /** Compiles every shader up front, then reports the scene as ready. */
 function Bootstrap() {
@@ -76,8 +80,12 @@ export default function SolarScene() {
         {PLANETS.map((body) => (
           <Planet key={body.id} body={body} />
         ))}
+        <Comet dustCount={settings.cometDust} ionCount={settings.cometIon} />
         <AsteroidBelt count={settings.asteroids} />
         <OrbitLines />
+        {settings.streaks > 0 && <WarpStreaks count={settings.streaks} />}
+        {settings.extras && <ZodiacalLight octaves={settings.nebulaOctaves} />}
+        {settings.extras && <LensFlare />}
         {settings.post && <Effects multisampling={quality === 2 ? 4 : 0} />}
         <Bootstrap />
       </Canvas>

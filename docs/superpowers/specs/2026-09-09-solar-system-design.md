@@ -109,3 +109,29 @@ Testing. Vitest covers `orbits`, `tour`, `camera`, `quality`, `random` (seeded),
 body-data validity.
 Browser verification: no console errors, sustained frame rate and draw-call count
 recorded from the running app at desktop and mobile viewports.
+
+## Round two (2026-09-09, approved in conversation)
+
+Requested: better planet visuals, an automatic tour with adjustable speed, and more
+3D animation (comet with a particle tail, warp streaks, aurora, plus realistic extras).
+
+- Autoplay (tour only). A play control with a 0.5x to 3x slider scrolls the page through
+  the tour by itself. Any wheel, touch, navigation key, or rail click pauses it. Entering
+  Explore switches it off. Reduced motion steps section by section on a timer instead.
+  Pure scroll maths in `lib/autoplay.ts`, unit-tested.
+- Visual pass. Each shader family is its own module with a uniform factory. Planet.tsx
+  writes `uDetail` (viewport coverage) so shaders drop octaves and bump mapping for
+  distant bodies. Rocky worlds get multi-scale craters, maria, canyons, frost; Earth gets
+  coastlines, mountains, cloud shadows, terminator glow, city lights and an aurora shell;
+  gas giants get shaped zonal bands, turbulence, a proper Great Red Spot and structured
+  rings; ice giants and Venus get their characteristic features; the atmosphere shell
+  gets a two-term scattering approximation.
+- Comet. Halley's Comet on a Keplerian ellipse (eccentricity 0.75, inclination 22,
+  compressed period) with a nucleus, a coma that swells near the Sun, a curved dust tail
+  driven by a trail buffer of past positions, and a straight anti-sunward ion tail. It is
+  in the Explore dock but not a tour section.
+- Effects. Warp streaks stretch along the camera velocity during flights; a faint
+  zodiacal light disc sits in the ecliptic; a lens flare appears when the Sun is in frame
+  and unoccluded. All three are gated by the quality tier.
+- Tooling. `npm run check:shaders` compiles every registered program headlessly;
+  `npm run test:e2e` runs Playwright smoke tests; both are part of the verification bar.

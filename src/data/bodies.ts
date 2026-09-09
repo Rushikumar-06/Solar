@@ -12,11 +12,12 @@ export type BodyId =
   | "saturn"
   | "uranus"
   | "neptune"
-  | "pluto";
+  | "pluto"
+  | "comet";
 
-export type SectionId = "hero" | Exclude<BodyId, "moon"> | "outro";
+export type SectionId = "hero" | Exclude<BodyId, "moon" | "comet"> | "outro";
 
-export type Family = "star" | "rocky" | "venus" | "earth" | "gas" | "ice" | "belt";
+export type Family = "star" | "rocky" | "venus" | "earth" | "gas" | "ice" | "belt" | "comet";
 
 export interface Stat {
   label: string;
@@ -96,7 +97,7 @@ export const BODIES: Record<BodyId, Body> = {
     axialTilt: 0.03,
     palette: ["#35312f", "#69635f", "#98928c", "#c9c3bb"],
     framing: { distanceFactor: 4.8, side: -1 },
-    params: { craters: 1.0, roughness: 0.9 },
+    params: { craters: 1.0, roughness: 0.9, rays: 0.6 },
   },
   venus: {
     id: "venus",
@@ -119,6 +120,7 @@ export const BODIES: Record<BodyId, Body> = {
     palette: ["#8a5a1d", "#c98a3a", "#e6b567", "#f5dfa8"],
     atmosphere: { color: "#f3d59a", strength: 0.9 },
     framing: { distanceFactor: 4.8, side: 1 },
+    params: { atmoThickness: 1.6 },
   },
   earth: {
     id: "earth",
@@ -141,6 +143,7 @@ export const BODIES: Record<BodyId, Body> = {
     palette: ["#0b2a5c", "#1f6fb5", "#3d8a3c", "#c9c7a1"],
     atmosphere: { color: "#5aa9ff", strength: 1.0 },
     framing: { distanceFactor: 4.2, side: -1 },
+    params: { aurora: 1, cloudCover: 0.6 },
   },
   moon: {
     id: "moon",
@@ -163,7 +166,7 @@ export const BODIES: Record<BodyId, Body> = {
     palette: ["#3c3c40", "#6b6b70", "#9a9a9e", "#c4c4c6"],
     parent: "earth",
     framing: { distanceFactor: 5, side: 0 },
-    params: { craters: 1.3, roughness: 1.0 },
+    params: { craters: 1.2, roughness: 1.0, maria: 1, rays: 1 },
   },
   mars: {
     id: "mars",
@@ -186,7 +189,7 @@ export const BODIES: Record<BodyId, Body> = {
     palette: ["#4a1e0f", "#8f3a1e", "#c8673a", "#e2a37a"],
     atmosphere: { color: "#e2a37a", strength: 0.35 },
     framing: { distanceFactor: 4.4, side: 1 },
-    params: { craters: 0.22, roughness: 0.7, polarCaps: 1 },
+    params: { craters: 0.3, roughness: 0.7, polarCaps: 1, canyon: 1, atmoThickness: 0.6 },
   },
   belt: {
     id: "belt",
@@ -255,7 +258,7 @@ export const BODIES: Record<BodyId, Body> = {
     atmosphere: { color: "#efe1bd", strength: 0.3 },
     rings: { inner: 4.1, outer: 7.4, color: "#d9c7a3" },
     framing: { distanceFactor: 6.6, side: 1 },
-    params: { bands: 7, warp: 0.5, storm: 0, stormLat: 0, stormLon: 0, stormSize: 0 },
+    params: { bands: 7, warp: 0.5, storm: 0, stormLat: 0, stormLon: 0, stormSize: 0, contrast: 0.55, hexagon: 1 },
   },
   uranus: {
     id: "uranus",
@@ -279,7 +282,7 @@ export const BODIES: Record<BodyId, Body> = {
     atmosphere: { color: "#a6e0e6", strength: 0.5 },
     rings: { inner: 2.6, outer: 3.1, color: "#9fb4b8" },
     framing: { distanceFactor: 4.0, side: -1 },
-    params: { bands: 4, storm: 0 },
+    params: { bands: 4, storm: 0, hood: 1, clouds: 1 },
   },
   neptune: {
     id: "neptune",
@@ -302,7 +305,7 @@ export const BODIES: Record<BodyId, Body> = {
     palette: ["#1a2d8a", "#2f56c9", "#4f7fe0", "#a6bff0"],
     atmosphere: { color: "#6f95f0", strength: 0.6 },
     framing: { distanceFactor: 4.0, side: 1 },
-    params: { bands: 5, storm: 1 },
+    params: { bands: 5, storm: 1, streaks: 1 },
   },
   pluto: {
     id: "pluto",
@@ -324,7 +327,31 @@ export const BODIES: Record<BodyId, Body> = {
     axialTilt: 122.5,
     palette: ["#5a3a2e", "#9a6d55", "#c9a689", "#efe3d5"],
     framing: { distanceFactor: 4.8, side: -1 },
-    params: { craters: 0.35, roughness: 0.6, heart: 1 },
+    params: { craters: 0.35, roughness: 0.6, heart: 1, tholin: 1 },
+  },
+  comet: {
+    id: "comet",
+    name: "Halley's Comet",
+    epithet: "A visitor from the edge of the system",
+    story:
+      "Halley swings in from beyond Neptune once every 76 years, last passing Earth in 1986 and due back in 2061. Near the Sun its ices boil off into tails that can stretch 100 million kilometres.",
+    wonder: "Dust it sheds lights up our skies twice a year, as the Eta Aquariid and Orionid meteor showers.",
+    stats: [
+      { label: "Closest to the Sun", value: "88 million km" },
+      { label: "Farthest from the Sun", value: "5.2 billion km" },
+      { label: "One orbit", value: "76 years" },
+      { label: "Nucleus", value: "15 by 8 km" },
+    ],
+    family: "comet",
+    radius: 0.28,
+    // Unlike the planets, the period is compressed to a few minutes so the comet
+    // visibly sweeps through the inner system. The negative period makes the orbit
+    // retrograde, as Halley's really is; perihelion sits between Mercury and Venus.
+    orbit: { orbitRadius: 76, orbitPeriod: -420, phase: 0.9, inclination: 18, eccentricity: 0.75 },
+    rotationPeriod: EARTH_DAY * 2.2,
+    axialTilt: 0,
+    palette: ["#3a3f48", "#6c737f", "#a9b3c2", "#e3ecf7"],
+    framing: { distanceFactor: 16, side: 0 },
   },
 };
 
@@ -341,11 +368,12 @@ export const BODY_ORDER: readonly BodyId[] = [
   "uranus",
   "neptune",
   "pluto",
+  "comet",
 ];
 
 export const TOUR_SECTIONS: readonly SectionId[] = [
   "hero",
-  ...(BODY_ORDER.filter((id) => id !== "moon") as Exclude<BodyId, "moon">[]),
+  ...(BODY_ORDER.filter((id) => id !== "moon" && id !== "comet") as Exclude<BodyId, "moon" | "comet">[]),
   "outro",
 ];
 
@@ -358,6 +386,9 @@ export function swatchFor(body: Body): string {
   const [dark, mid, light, lightest] = body.palette;
   if (body.family === "star") {
     return `radial-gradient(circle at 50% 50%, ${lightest} 0%, ${light} 35%, ${mid} 70%, ${dark} 100%)`;
+  }
+  if (body.family === "comet") {
+    return `linear-gradient(100deg, ${lightest} 0%, ${light} 30%, ${mid} 60%, ${dark} 100%)`;
   }
   return `radial-gradient(circle at 32% 30%, ${lightest} 0%, ${light} 28%, ${mid} 58%, ${dark} 100%)`;
 }

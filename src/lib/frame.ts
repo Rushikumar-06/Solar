@@ -17,6 +17,10 @@ export const frame = {
   timeScale: 1,
   /** True on narrow (portrait / phone) viewports. */
   narrow: false,
+  /** Smoothed camera velocity in world units per second, written by the camera rig. */
+  cameraVelocity: new THREE.Vector3(),
+  /** Length of `cameraVelocity`, in world units per second. */
+  cameraSpeed: 0,
 };
 
 export const positions = Object.fromEntries(BODY_ORDER.map((id) => [id, new THREE.Vector3()])) as Record<

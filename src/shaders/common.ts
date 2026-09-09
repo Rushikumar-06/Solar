@@ -108,6 +108,17 @@ varying vec3 vWorld;
 varying vec3 vNormalW;
 `;
 
+/**
+ * Object-space light vectors for spherical bodies lit by the Sun at the origin.
+ * Declares: toObj (world to object rotation), sunObj, viewObj, geoN.
+ */
+export const LIGHT_SETUP_GLSL = /* glsl */ `
+  mat3 toObj = transpose(mat3(modelMatrix));
+  vec3 sunObj = normalize(toObj * (-vWorld));
+  vec3 viewObj = normalize(toObj * (cameraPosition - vWorld));
+  vec3 geoN = normalize(vObj);
+`;
+
 export const OUTPUT_GLSL = /* glsl */ `
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

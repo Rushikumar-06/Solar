@@ -18,8 +18,8 @@ void main() {
   vec3 col = mix(uPal[0], uPal[1], smoothstep(0.1, 0.4, v));
   col = mix(col, uPal[2], smoothstep(0.4, 0.68, v));
   col = mix(col, uPal[3], smoothstep(0.7, 0.98, v) * 0.7);
-  float spots = smoothstep(0.62, 0.75, fbm(p * 4.0 + vec3(0.0, t * 0.5, 0.0) + 11.0, 3) * 0.5 + 0.5);
-  col = mix(col, uPal[0] * 0.5, spots * 0.85);
+  float spots = smoothstep(0.7, 0.8, fbm(p * 4.0 + vec3(0.0, t * 0.5, 0.0) + 11.0, 3) * 0.5 + 0.5);
+  col = mix(col, uPal[0] * 0.6, spots * 0.6);
   vec3 n = normalize(vNormalW);
   vec3 viewDir = normalize(cameraPosition - vWorld);
   float mu = max(dot(n, viewDir), 0.0);
@@ -39,10 +39,10 @@ void main() {
   vec3 n = normalize(vNormalW);
   vec3 v = normalize(cameraPosition - vWorld);
   float mu = max(dot(n, v), 0.0);
-  float fres = pow(1.0 - mu, 2.2);
+  float fres = pow(1.0 - mu, 3.6);
   float t = uTime * 0.05;
   float noise = fbm(vObj * 3.0 + vec3(t, -t, t * 0.5), 4) * 0.5 + 0.5;
-  float a = fres * (0.55 + 0.45 * noise) * 0.9;
+  float a = fres * (0.4 + 0.6 * noise) * 0.5;
   gl_FragColor = vec4(uColor * a * 1.4, a);
   ${OUTPUT_GLSL}
 }
@@ -104,8 +104,8 @@ void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r = length(c) * 2.0;
   float a = smoothstep(1.0, 0.2, r) * smoothstep(0.0, 0.15, vLife) * (1.0 - vLife);
-  vec3 col = mix(vec3(1.0, 0.95, 0.8), vec3(1.0, 0.45, 0.1), vLife);
-  gl_FragColor = vec4(col * a * 1.5, a);
+  vec3 col = mix(vec3(1.0, 0.85, 0.6), vec3(1.0, 0.45, 0.1), vLife);
+  gl_FragColor = vec4(col * a * 0.9, a * 0.8);
   ${OUTPUT_GLSL}
 }
 `;

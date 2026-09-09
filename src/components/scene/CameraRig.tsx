@@ -1,6 +1,6 @@
 "use client";
 
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree, type RootState } from "@react-three/fiber";
 import CameraControls from "camera-controls";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
@@ -75,6 +75,36 @@ const dampVec = (v: THREE.Vector3, to: THREE.Vector3, lambda: number, dt: number
   v.z = damp(v.z, to.z, lambda, dt);
 };
 
+/** A jump faster than this (world units per second) is a cut, not motion. */
+const TELEPORT_SPEED = 1500;
+
+/**
+ * Damps the camera's displacement per second into `frame.cameraVelocity` and
+ * refreshes `frame.cameraSpeed`. Called once per frame after the rig has moved
+ * the camera, whichever branch moved it.
+ */
+function trackVelocity(rig: { prevPosition: THREE.Vector3; prevTracked: boolean }, cam: THREE.Camera, elapsed: number, dt: number) {
+  const p = cam.position;
+  const prev = rig.prevPosition;
+  const v = frame.cameraVelocity;
+  if (rig.prevTracked) {
+    const inv = 1 / Math.max(elapsed, 1e-4);
+    const vx = (p.x - prev.x) * inv;
+    const vy = (p.y - prev.y) * inv;
+    const vz = (p.z - prev.z) * inv;
+    if (vx * vx + vy * vy + vz * vz < TELEPORT_SPEED * TELEPORT_SPEED) {
+      v.x = damp(v.x, vx, 6, dt);
+      v.y = damp(v.y, vy, 6, dt);
+      v.z = damp(v.z, vz, 6, dt);
+    } else {
+      v.set(0, 0, 0);
+    }
+  }
+  prev.copy(p);
+  rig.prevTracked = true;
+  frame.cameraSpeed = v.length();
+}
+
 /**
  * Drives the camera. In tour mode it follows the scroll position; in explore
  * mode it flies to the focused body, then hands the camera to camera-controls
@@ -101,6 +131,8 @@ export function CameraRig() {
     right: new THREE.Vector3(),
     up: new THREE.Vector3(),
     finalPos: new THREE.Vector3(),
+    prevPosition: new THREE.Vector3(),
+    prevTracked: false,
   }).current;
 
   useEffect(() => {
@@ -119,7 +151,7 @@ export function CameraRig() {
     };
   }, [camera, gl]);
 
-  useFrame((state, delta) => {
+  const drive = (state: RootState, delta: number) => {
     const dt = Math.min(delta, 0.1);
     const app = useApp.getState();
     const controls = controlsRef.current;
@@ -233,6 +265,11 @@ export function CameraRig() {
       }
       controls.update(dt);
     }
+  };
+
+  useFrame((state, delta) => {
+    drive(state, delta);
+    trackVelocity(rig, camera, delta, Math.min(delta, 0.1));
   }, -5);
 
   return null;

@@ -804,3 +804,117 @@ button {
     width: 100%;
   }
 }
+
+/* ---------- autoplay ---------- */
+.autoplay {
+  position: fixed;
+  left: clamp(20px, 6vw, 96px);
+  bottom: 26px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.5s var(--ease);
+}
+
+.autoplay[data-visible="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.autoplay-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.5s var(--ease),
+    transform 0.5s var(--ease);
+}
+
+.autoplay:hover .autoplay-speed,
+.autoplay:focus-within .autoplay-speed,
+.autoplay[data-running="true"] .autoplay-speed {
+  opacity: 1;
+  transform: none;
+}
+
+.autoplay-readout {
+  min-width: 3.6ch;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-ink);
+}
+
+.autoplay-speed input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 112px;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.autoplay-speed input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(231, 235, 245, 0.2);
+}
+
+.autoplay-speed input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-sun);
+  box-shadow: 0 0 0 3px rgba(230, 181, 99, 0.18);
+}
+
+.autoplay-speed input[type="range"]::-moz-range-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(231, 235, 245, 0.2);
+}
+
+.autoplay-speed input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-sun);
+  box-shadow: 0 0 0 3px rgba(230, 181, 99, 0.18);
+}
+
+.autoplay-speed input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-sun);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+@media (max-width: 767px) {
+  .autoplay {
+    left: 16px;
+    bottom: auto;
+    top: 66px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .autoplay,
+  .autoplay-speed {
+    transition-duration: 0.01ms !important;
+  }
+}

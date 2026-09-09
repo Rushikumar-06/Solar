@@ -73,7 +73,7 @@ export function Sun({ flares }: { flares: number }) {
       v.set(random() * 2 - 1, random() * 2 - 1, random() * 2 - 1).normalize();
       dir.set([v.x, v.y, v.z], i * 3);
       pos.set([v.x * sun.radius, v.y * sun.radius, v.z * sun.radius], i * 3);
-      data.set([0.05 + random() * 0.12, random(), 2.5 + random() * 6, 0.3 + random() * 1.1], i * 4);
+      data.set([0.05 + random() * 0.12, random(), 1.5 + random() * 3.5, 0.3 + random() * 1.1], i * 4);
     }
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("aDir", new THREE.BufferAttribute(dir, 3));

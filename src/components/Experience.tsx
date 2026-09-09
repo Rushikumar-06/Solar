@@ -6,6 +6,7 @@ import { frame } from "@/lib/frame";
 import { detectQualityFromBrowser } from "@/lib/quality";
 import { lockScroll } from "@/lib/scroll";
 import { useApp } from "@/lib/store";
+import { Autoplay } from "./ui/Autoplay";
 import { ExploreHud } from "./ui/ExploreHud";
 import { HoverLabel } from "./ui/HoverLabel";
 import { Loader } from "./ui/Loader";
@@ -63,6 +64,7 @@ export default function Experience() {
       <Nav />
       <Tour />
       <ProgressRail />
+      <Autoplay />
       <ExploreHud />
       <HoverLabel />
     </>

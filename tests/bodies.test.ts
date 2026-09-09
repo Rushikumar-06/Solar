@@ -13,10 +13,10 @@ describe("bodies data", () => {
     expect(TOUR_SECTIONS[0]).toBe("hero");
     expect(TOUR_SECTIONS[TOUR_SECTIONS.length - 1]).toBe("outro");
     const middle = TOUR_SECTIONS.slice(1, -1);
-    expect(middle).toEqual(BODY_ORDER.filter((id) => id !== "moon"));
+    expect(middle).toEqual(BODY_ORDER.filter((id) => id !== "moon" && id !== "comet"));
   });
   it("orders orbiting bodies outward from the Sun", () => {
-    const radii = BODY_ORDER.filter((id) => !BODIES[id].parent && id !== "sun").map(
+    const radii = BODY_ORDER.filter((id) => !BODIES[id].parent && id !== "sun" && BODIES[id].family !== "comet").map(
       (id) => BODIES[id].orbit.orbitRadius,
     );
     for (let i = 1; i < radii.length; i++) expect(radii[i]).toBeGreaterThan(radii[i - 1]);
@@ -37,6 +37,16 @@ describe("bodies data", () => {
       expect(body.palette).toHaveLength(4);
       for (const c of body.palette) expect(c).toMatch(HEX);
     }
+  });
+  it("puts the comet on a retrograde ellipse that reaches from inside Venus to Pluto's orbit", () => {
+    const { orbit } = BODIES.comet;
+    expect(orbit.eccentricity).toBeGreaterThan(0.5);
+    expect(orbit.orbitPeriod).toBeLessThan(0);
+    const perihelion = orbit.orbitRadius * (1 - (orbit.eccentricity ?? 0));
+    const aphelion = orbit.orbitRadius * (1 + (orbit.eccentricity ?? 0));
+    expect(perihelion).toBeGreaterThan(BODIES.mercury.orbit.orbitRadius);
+    expect(perihelion).toBeLessThan(BODIES.venus.orbit.orbitRadius);
+    expect(aphelion).toBeCloseTo(BODIES.pluto.orbit.orbitRadius, -1);
   });
   it("attaches the Moon to Earth", () => {
     expect(BODIES.moon.parent).toBe("earth");

@@ -35,3 +35,20 @@ describe("qualitySettings", () => {
     expect(qualitySettings(0).maxDpr).toBeLessThan(qualitySettings(2).maxDpr);
   });
 });
+
+describe("qualitySettings for the added effects", () => {
+  it("disables warp streaks on the lowest tier and scales them up", () => {
+    expect(qualitySettings(0).streaks).toBe(0);
+    expect(qualitySettings(1).streaks).toBeGreaterThan(0);
+    expect(qualitySettings(2).streaks).toBeGreaterThan(qualitySettings(1).streaks);
+  });
+  it("scales comet tail particles with the tier", () => {
+    expect(qualitySettings(0).cometDust).toBeGreaterThan(0);
+    expect(qualitySettings(1).cometDust).toBeGreaterThan(qualitySettings(0).cometDust);
+    expect(qualitySettings(2).cometIon).toBeGreaterThan(qualitySettings(1).cometIon);
+  });
+  it("keeps the lens flare and zodiacal light off the lowest tier", () => {
+    expect(qualitySettings(0).extras).toBe(false);
+    expect(qualitySettings(2).extras).toBe(true);
+  });
+});
