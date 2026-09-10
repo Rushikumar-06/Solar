@@ -210,8 +210,67 @@ button {
   margin: 0 0 22px;
 }
 
+/* ---------- moons ---------- */
+.moon-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 20px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.moon-row-label {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-right: 4px;
+}
+
+.moon-row-none {
+  font-size: 13.5px;
+  color: rgba(231, 235, 245, 0.62);
+}
+
+.moon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(231, 235, 245, 0.86);
+  font-size: 13px;
+  white-space: nowrap;
+  transition:
+    background 0.4s var(--ease),
+    color 0.4s var(--ease),
+    border-color 0.4s var(--ease);
+}
+
+.moon-chip:hover:not(:disabled) {
+  color: var(--color-ink);
+  border-color: rgba(231, 235, 245, 0.28);
+  background: rgba(231, 235, 245, 0.07);
+}
+
+.moon-chip:disabled {
+  cursor: default;
+}
+
+.swatch--small {
+  width: 12px;
+  height: 12px;
+}
+
 .panel--compact {
   padding: 22px 24px 20px;
+}
+
+.panel--compact .moon-row {
+  margin-bottom: 16px;
+  padding-top: 14px;
 }
 
 .panel--compact .panel-title {

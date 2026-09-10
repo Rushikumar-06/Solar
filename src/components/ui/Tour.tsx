@@ -72,7 +72,7 @@ export function Tour() {
         return (
           <section key={id} id={sectionDomId(id)} className="tour-section" data-shown={shown(index)}>
             <div className="tour-sticky" data-side={side}>
-              <StoryPanel body={body} onExplore={() => enterExplore(body.id)} />
+              <StoryPanel body={body} onExplore={() => enterExplore(body.id)} onSelect={(id) => enterExplore(id)} />
             </div>
           </section>
         );

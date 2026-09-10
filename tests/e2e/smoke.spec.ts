@@ -25,6 +25,10 @@ test.describe("Orrery", () => {
       if (msg.type() === "warning" && /WebGL: INVALID/.test(msg.text())) glWarnings.push(msg.text());
     });
     page.on("pageerror", (err) => errors.push(String(err)));
+    const maps = new Map<string, number>();
+    page.on("response", (res) => {
+      if (res.url().includes("/maps/")) maps.set(res.url().split("/").pop()!, res.status());
+    });
 
     await page.goto("/");
     await expect(page.locator(".loader")).toHaveAttribute("data-hidden", "true", { timeout: 60_000 });
@@ -52,6 +56,15 @@ test.describe("Orrery", () => {
     await page.keyboard.press("Escape");
     await expect(page.locator(".hud")).toHaveAttribute("data-open", "false");
     await expect(page.locator("#section-uranus")).toHaveAttribute("data-shown", "true");
+
+    // The real surface maps have to arrive. A missing one fails quietly, leaving
+    // a world flat-coloured with nothing in the console to say why.
+    expect([...maps.entries()].sort()).toEqual([
+      ["earth-land.png", 200],
+      ["earth.jpg", 200],
+      ["mercury.jpg", 200],
+      ["moon.jpg", 200],
+    ]);
 
     expect(errors, errors.join("\n")).toEqual([]);
     expect(glWarnings, glWarnings.join("\n")).toEqual([]);

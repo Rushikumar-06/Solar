@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Body } from "@/data/bodies";
-import { BODY_VARYINGS, LIGHT_SETUP_GLSL, NOISE_GLSL, OUTPUT_GLSL } from "./common";
+import { BODY_VARYINGS, LIGHT_SETUP_GLSL, MAP_GLSL, NOISE_GLSL, OUTPUT_GLSL } from "./common";
+import { surfaceMap } from "@/lib/maps";
 import { baseUniforms, type Uniforms } from "./uniforms";
 
 /** Cloud cover shared by the surface (for shadows) and the cloud shell. */
@@ -28,7 +29,11 @@ float cloudDensity(vec3 p, float t, float seed, float cover, int oct) {
 }
 `;
 
-/** Oceans, continents, mountains, ice, city lights, cloud shadows and twilight. */
+/**
+ * The real Earth: continents, ocean depth, mountains, city lights, cloud
+ * shadows and twilight. Geography comes from the map, everything else is grown
+ * here, so the coast stays crisp however close the camera gets.
+ */
 export const EARTH_FRAG = /* glsl */ `
 uniform vec3 uPal[4];
 uniform float uSeed;
@@ -38,64 +43,58 @@ uniform float uCover;
 uniform float uAmbient;
 uniform vec3 uAtmo;
 uniform float uAtmoStrength;
+uniform sampler2D uMap;
+uniform sampler2D uLand;
 ${BODY_VARYINGS}
 ${NOISE_GLSL}
+${MAP_GLSL}
 ${CLOUD_GLSL}
 
-float continent(vec3 p, int oct) {
-  vec3 q = p * 1.6 + uSeed;
-  vec3 w = vec3(fbm(q + 3.1, 2), fbm(q + 7.7, 2), fbm(q - 2.3, 2)) * 0.18;
-  vec3 s = p + w;
-  float c = fbm(s * 1.5 + uSeed, oct);
-  float ridge = 1.0 - abs(snoise(s * 5.0 + uSeed * 1.3));
-  c += ridge * ridge * 0.12 * smoothstep(0.05, 0.3, c);
-  return c;
+// Hills and mountain ridges. The map has no elevation, so the relief is grown
+// here and then held to the land.
+float relief(vec3 p, int oct) {
+  vec3 q = p * 1.7 + uSeed;
+  float base = fbm(q, oct) * 0.5 + 0.5;
+  float ridge = 1.0 - abs(snoise(q * 1.9 + 3.1));
+  return mix(base, ridge * ridge, 0.4);
 }
 
 void main() {
   vec3 p = vObj;
   int oct = uDetail > 0.6 ? 5 : (uDetail > 0.3 ? 4 : 3);
-  float sea = 0.12;
-  float c0 = continent(p, oct);
-  float land = smoothstep(sea - 0.012, sea + 0.012, c0);
-  float elev = clamp((c0 - sea) / 0.55, 0.0, 1.0);
+  vec3 ground = mapAt(uMap, p).rgb;
+  // The mask fades across a texel or two of coast. Pulling it back to an edge,
+  // over a little noise, keeps the shoreline crisp without looking machine cut.
+  float cover = mapAt(uLand, p).r;
+  float land = smoothstep(0.42, 0.58, cover + 0.06 * fbm(p * 52.0 + uSeed, 2));
+  // A coarse mip of the same mask says how far a point lies from open water:
+  // it sets the depth of the sea and gathers the city lights onto the coasts.
+  float inland = mapBlur(uLand, p, 3.5).r;
+  float elev = relief(p, oct);
+
   vec3 nObj = normalize(p);
   if (uDetail > 0.3) {
     vec3 up = abs(p.y) > 0.98 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
     vec3 T = normalize(cross(up, p));
     vec3 B = normalize(cross(p, T));
     float e = 0.01;
-    float ct = continent(normalize(p + T * e), oct);
-    float cb = continent(normalize(p + B * e), oct);
-    float bump = 0.3 * smoothstep(0.3, 0.7, uDetail) * smoothstep(0.0, 0.08, c0 - sea);
-    nObj = normalize(p - (T * (ct - c0) + B * (cb - c0)) * (bump / e));
+    float ht = relief(normalize(p + T * e), oct);
+    float hb = relief(normalize(p + B * e), oct);
+    float bump = 0.045 * smoothstep(0.3, 0.7, uDetail) * land;
+    nObj = normalize(p - (T * (ht - elev) + B * (hb - elev)) * (bump / e));
   }
   ${LIGHT_SETUP_GLSL}
 
   float lat = abs(p.y);
-  float moisture = fbm(p * 3.0 + uSeed + 11.0, 3) * 0.5 + 0.5;
-  float warmth = 1.0 - lat - elev * 0.5;
-  vec3 forest = uPal[2] * vec3(0.75, 0.85, 0.7);
-  vec3 grass = mix(uPal[2], uPal[3], 0.45);
-  vec3 sand = uPal[3];
-  vec3 rock = vec3(0.42, 0.38, 0.34);
-  vec3 landCol = mix(grass, forest, smoothstep(0.45, 0.7, moisture));
-  float desert = smoothstep(0.55, 0.8, warmth) * (1.0 - smoothstep(0.35, 0.55, moisture));
-  landCol = mix(landCol, sand, desert);
-  landCol = mix(landCol, rock, smoothstep(0.45, 0.8, elev));
-  landCol *= 0.88 + 0.24 * (fbm(p * 14.0 + uSeed, 2) * 0.5 + 0.5);
-  float snowLine = 0.62 + 0.3 * (1.0 - lat);
-  float snow = smoothstep(snowLine - 0.1, snowLine + 0.05, elev + 0.06 * fbm(p * 9.0, 2));
-  snow = max(snow, smoothstep(0.78, 0.9, lat + 0.05 * fbm(p * 6.0, 3)));
-  landCol = mix(landCol, vec3(0.94, 0.95, 0.97), snow);
-
-  float shelf = smoothstep(sea - 0.09, sea, c0);
-  float depth = smoothstep(-0.4, sea - 0.09, c0);
-  vec3 oceanCol = mix(uPal[0] * 0.8, uPal[1], depth);
-  oceanCol = mix(oceanCol, vec3(0.2, 0.62, 0.72), shelf * 0.7);
-  vec3 col = mix(oceanCol, landCol, land);
-  float ice = smoothstep(0.86, 0.94, lat + 0.05 * fbm(p * 6.0, 3));
-  col = mix(col, vec3(0.95, 0.97, 1.0), ice);
+  vec3 col = ground;
+  // A little grain, so the map does not go flat when the camera comes in close.
+  col *= 0.94 + 0.12 * (fbm(p * 44.0 + uSeed, 2) * 0.5 + 0.5);
+  // Only the high ground shows: mountains pale off toward bare rock and snow.
+  float peaks = smoothstep(0.62, 0.95, elev);
+  col = mix(col, mix(col * 1.15, vec3(0.72, 0.72, 0.74), peaks * 0.5), land * peaks);
+  // Open water goes darker and bluer than the map's average sea.
+  vec3 oceanCol = col * mix(mix(uPal[0], uPal[1], 0.5) * 2.2, vec3(1.0), smoothstep(0.0, 0.4, inland));
+  col = mix(oceanCol, col, land);
 
   // Cloud shadows, roughly under the cloud shell (which spins a little faster).
   float ca = 0.4;
@@ -111,15 +110,17 @@ void main() {
   vec3 lit = col * (sunCol * diff * 1.2 + vec3(0.6, 0.75, 1.0) * uAmbient);
 
   vec3 hv = normalize(sunObj + viewObj);
-  float glint = pow(max(dot(geoN, hv), 0.0), 140.0) * (1.0 - land) * (1.0 - ice) * (1.0 - cloud * 0.8) * day;
-  lit += vec3(1.0, 0.95, 0.85) * glint * 1.2;
+  // Sun glint off the water. It has to stay under the bloom threshold, or the
+  // sharp spot blows up into a soft blob the size of an ocean.
+  float glint = pow(max(dot(geoN, hv), 0.0), 220.0) * (1.0 - land) * (1.0 - smoothstep(0.8, 0.92, lat)) * (1.0 - cloud * 0.8) * day;
+  lit += vec3(1.0, 0.95, 0.85) * min(glint, 0.55);
 
   // City lights on the night side, near coasts and in the mid latitudes.
   float night = 1.0 - smoothstep(-0.25, 0.05, ndlGeo);
-  float coast = 1.0 - smoothstep(0.0, 0.14, c0 - sea);
+  float coast = 1.0 - smoothstep(0.1, 0.7, inland);
   float cities = smoothstep(0.55, 0.9, fbm(p * 42.0 + uSeed, 2) * 0.5 + 0.5);
-  float cityMask = smoothstep(0.15, 0.6, fbm(p * 5.0 + 3.0, 3) * 0.5 + 0.5) * land * (1.0 - snow) * (1.0 - desert * 0.7);
-  cityMask *= (0.35 + 0.65 * coast) * (1.0 - smoothstep(0.55, 0.75, lat)) * (1.0 - cloud * 0.6);
+  float cityMask = smoothstep(0.15, 0.6, fbm(p * 5.0 + 3.0, 3) * 0.5 + 0.5) * land;
+  cityMask *= (0.3 + 0.7 * coast) * (1.0 - smoothstep(0.55, 0.75, lat)) * (1.0 - cloud * 0.6);
   lit += vec3(1.0, 0.78, 0.45) * cities * cityMask * night * 1.5;
 
   // Atmosphere: blue rim by day, an orange band along the terminator.
@@ -135,7 +136,12 @@ void main() {
 `;
 
 export function earthUniforms(body: Body): Uniforms {
-  return { ...baseUniforms(body), uCover: { value: body.params?.cloudCover ?? 0.6 } };
+  return {
+    ...baseUniforms(body),
+    uCover: { value: body.params?.cloudCover ?? 0.6 },
+    uMap: { value: surfaceMap("earth") },
+    uLand: { value: surfaceMap("earth-land") },
+  };
 }
 
 /** Drifting cloud shell drawn slightly above the surface. */

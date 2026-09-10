@@ -87,6 +87,36 @@ float cellular(vec3 p) {
 }
 `;
 
+/**
+ * Lookups into the real surface maps, which are equirectangular: object-space
+ * +x is the prime meridian and longitude runs east from there, so a locked moon
+ * holds the middle of its map turned toward the planet it circles.
+ */
+export const MAP_GLSL = /* glsl */ `
+vec2 equirect(vec3 p) {
+  return vec2(0.5 + atan(-p.z, p.x) * 0.15915494, 0.5 + asin(clamp(p.y, -1.0, 1.0)) * 0.31830989);
+}
+
+/**
+ * Longitude jumps a whole turn along the meridian behind the body, which would
+ * throw mip selection off on that one line, so the gradients are read from a
+ * copy of the coordinate whose own jump lies half a turn away.
+ */
+vec4 mapAt(sampler2D map, vec3 p) {
+  vec2 uv = equirect(p);
+  vec2 far = vec2(fract(uv.x + 0.5), uv.y);
+  float seam = step(0.25, abs(uv.x - 0.5));
+  vec2 dx = mix(dFdx(uv), dFdx(far), seam);
+  vec2 dy = mix(dFdy(uv), dFdy(far), seam);
+  return texture2DGradEXT(map, uv, dx, dy);
+}
+
+/** The same lookup off a coarse mip, which reads as a wide blur. */
+vec4 mapBlur(sampler2D map, vec3 p, float level) {
+  return texture2DLodEXT(map, equirect(p), level);
+}
+`;
+
 /** Shared vertex shader for every spherical body. */
 export const BODY_VERT = /* glsl */ `
 varying vec3 vObj;

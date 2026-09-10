@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useEffect } from "react";
-import { BODIES, BODY_ORDER, swatchFor } from "@/data/bodies";
+import { BODIES, PRIMARY_ORDER, swatchFor } from "@/data/bodies";
 import { lockScroll, scrollToSection } from "@/lib/scroll";
 import { sectionForBody, useApp } from "@/lib/store";
 import { StoryPanel } from "./StoryPanel";
@@ -85,7 +85,7 @@ export function ExploreHud() {
 
       {focus && (
         <aside className="hud-panel">
-          <StoryPanel body={BODIES[focus]} compact onClose={() => setFocus(null)} />
+          <StoryPanel body={BODIES[focus]} compact onClose={() => setFocus(null)} onSelect={setFocus} />
         </aside>
       )}
 
@@ -94,7 +94,7 @@ export function ExploreHud() {
       </p>
 
       <nav className="dock" aria-label="Worlds">
-        {BODY_ORDER.map((id) => {
+        {PRIMARY_ORDER.map((id) => {
           const body = BODIES[id];
           return (
             <button

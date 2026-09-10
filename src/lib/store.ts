@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { BODIES, BODY_ORDER, TOUR_SECTIONS, type BodyId, type SectionId } from "@/data/bodies";
+import { BODIES, PRIMARY_ORDER, TOUR_SECTIONS, type BodyId, type SectionId } from "@/data/bodies";
 import type { QualityTier } from "./quality";
 import { SPEED_DEFAULT, clampSpeed } from "./autoplay";
 import { frame } from "./frame";
@@ -70,12 +70,14 @@ export const useApp = create<AppState>((set, get) => ({
   },
   exitExplore: () => set({ mode: "tour", hovered: null, autoplay: false }),
   setFocus: (focus) => set({ focus }),
+  // Arrow keys step through the planets. From a moon they carry on from its planet.
   stepFocus: (direction) => {
     const { focus } = get();
-    const i = focus ? BODY_ORDER.indexOf(focus) : -1;
-    const n = BODY_ORDER.length;
+    const anchor = focus ? BODIES[focus].parent ?? focus : null;
+    const i = anchor ? PRIMARY_ORDER.indexOf(anchor as (typeof PRIMARY_ORDER)[number]) : -1;
+    const n = PRIMARY_ORDER.length;
     const nextIndex = i < 0 ? (direction > 0 ? 0 : n - 1) : (i + direction + n) % n;
-    set({ focus: BODY_ORDER[nextIndex] });
+    set({ focus: PRIMARY_ORDER[nextIndex] });
   },
   setTimeScale: (timeScale) => {
     frame.timeScale = timeScale;

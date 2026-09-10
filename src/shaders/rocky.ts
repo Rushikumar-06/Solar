@@ -1,5 +1,6 @@
 import type { Body } from "@/data/bodies";
-import { BODY_VARYINGS, LIGHT_SETUP_GLSL, NOISE_GLSL, OUTPUT_GLSL } from "./common";
+import { BODY_VARYINGS, LIGHT_SETUP_GLSL, MAP_GLSL, NOISE_GLSL, OUTPUT_GLSL } from "./common";
+import { surfaceMapFor } from "@/lib/maps";
 import { baseUniforms, type Uniforms } from "./uniforms";
 
 /**
@@ -24,8 +25,11 @@ uniform float uRays;
 uniform float uTholin;
 uniform vec3 uAtmo;
 uniform float uAtmoStrength;
+uniform sampler2D uMap;
+uniform float uMapMix;
 ${BODY_VARYINGS}
 ${NOISE_GLSL}
+${MAP_GLSL}
 
 // One crater field: bowls with raised rims, at a given feature scale.
 float craterLayer(vec3 p, float scale, float depth, float seed) {
@@ -76,6 +80,8 @@ void main() {
   vec3 p = vObj;
   int oct = uDetail > 0.6 ? 5 : (uDetail > 0.3 ? 4 : 3);
   float h0 = terrain(p, oct);
+  // Only Mercury carries a real map here; for Mars and Pluto uMapMix is zero.
+  float alb = mapAt(uMap, p).r;
   vec3 nObj = normalize(p);
   if (uDetail > 0.3) {
     vec3 up = abs(p.y) > 0.98 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
@@ -91,7 +97,9 @@ void main() {
 
   float lat = abs(p.y);
   float high = highlands(p);
-  float h = clamp(h0, 0.0, 1.0);
+  // With a real map its albedo stands in for the height the colour is ramped
+  // from, keeping a little of the invented ground for texture between texels.
+  float h = clamp(mix(h0, mix(alb, h0, 0.12), uMapMix), 0.0, 1.0);
   vec3 col = mix(uPal[0], uPal[1], smoothstep(0.12, 0.42, h));
   col = mix(col, uPal[2], smoothstep(0.42, 0.66, h));
   col = mix(col, uPal[3], smoothstep(0.66, 0.92, h));
@@ -146,8 +154,11 @@ void main() {
 
 export function rockyUniforms(body: Body): Uniforms {
   const p = body.params ?? {};
+  const map = surfaceMapFor(body);
   return {
     ...baseUniforms(body),
+    uMap: { value: map.texture },
+    uMapMix: { value: map.mix },
     uCraters: { value: p.craters ?? 0.8 },
     uRoughness: { value: p.roughness ?? 0.9 },
     uPolarCaps: { value: p.polarCaps ?? 0 },

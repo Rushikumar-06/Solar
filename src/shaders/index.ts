@@ -9,6 +9,7 @@ import { BODY_VERT } from "./common";
 import { AURORA_FRAG, CLOUDS_FRAG, EARTH_FRAG } from "./earth";
 import { GAS_FRAG, RING_FRAG, RING_VERT } from "./gas";
 import { ICE_FRAG } from "./ice";
+import { PROGRAMS as MOON_PROGRAMS } from "./moons";
 import { BELT_FRAG, BELT_VERT, DUST_FRAG, DUST_VERT, NEBULA_FRAG, NEBULA_VERT, STARS_FRAG, STARS_VERT } from "./particles";
 import { ROCKY_FRAG } from "./rocky";
 import { CORONA_FRAG, FLARE_FRAG, FLARE_VERT, GLOW_FRAG, GLOW_VERT, SUN_FRAG } from "./sun";
@@ -42,4 +43,5 @@ export const SHADER_PROGRAMS: ShaderProgram[] = [
   { name: "belt", vertex: BELT_VERT, fragment: BELT_FRAG, kind: "instanced" },
   ...EFFECT_PROGRAMS,
   ...COMET_PROGRAMS,
+  ...MOON_PROGRAMS,
 ];

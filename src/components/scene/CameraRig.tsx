@@ -69,6 +69,11 @@ function focusPose(id: BodyId | null, out: Pose): Pose {
 }
 
 const FLIGHT_SECONDS = 1.7;
+/** Ceiling on a flight, however far it has to go. */
+const MAX_FLIGHT_SECONDS = 3.6;
+/** Frame deltas are clamped, so a flight is budgeted in damped seconds, not wall time. */
+/** Damping rate of an explore flight, in inverse seconds. */
+const FLIGHT_LAMBDA = 3.4;
 const dampVec = (v: THREE.Vector3, to: THREE.Vector3, lambda: number, dt: number) => {
   v.x = damp(v.x, to.x, lambda, dt);
   v.y = damp(v.y, to.y, lambda, dt);
@@ -119,7 +124,7 @@ export function CameraRig() {
     initialised: false,
     mode: "tour" as Mode,
     focus: null as BodyId | null | undefined,
-    flightEnds: 0,
+    flightLeft: 0,
     handedOver: false,
     fov: 0,
     pose: makePose(),
@@ -133,6 +138,9 @@ export function CameraRig() {
     finalPos: new THREE.Vector3(),
     prevPosition: new THREE.Vector3(),
     prevTracked: false,
+    anchor: new THREE.Vector3(),
+    anchorValid: false,
+    shift: new THREE.Vector3(),
   }).current;
 
   useEffect(() => {
@@ -221,8 +229,8 @@ export function CameraRig() {
       const entering = rig.mode !== "explore";
       rig.mode = "explore";
       rig.focus = app.focus;
-      rig.flightEnds = state.clock.elapsedTime + FLIGHT_SECONDS;
       rig.handedOver = false;
+      rig.anchorValid = false;
       if (controls) controls.enabled = false;
       if (entering) {
         rig.position.copy(cam.position);
@@ -231,26 +239,50 @@ export function CameraRig() {
         controls.getTarget(rig.target);
         rig.position.copy(cam.position);
       }
+      // Damping closes the gap by a fixed fraction per second, so a long hop to
+      // a small moon needs longer than a short one to a planet. Give the flight
+      // the time it actually needs, or it hands over parked well short.
+      focusPose(app.focus, rig.pose);
+      const travel = rig.position.distanceTo(rig.pose.position);
+      const span = Math.max(rig.pose.position.distanceTo(rig.pose.target), 1e-3);
+      const need = Math.log(Math.max(travel / (0.02 * span), 2)) / FLIGHT_LAMBDA;
+      rig.flightLeft = Math.min(Math.max(need, FLIGHT_SECONDS), MAX_FLIGHT_SECONDS);
     }
 
     if (!rig.handedOver) {
+      // Carry the camera along with the body before damping, so the approach is
+      // measured in the body's own frame. Without this the camera trails a fast
+      // moon by roughly its speed over the damping rate and never closes in.
+      if (app.focus) {
+        const p = positions[app.focus];
+        if (rig.anchorValid) {
+          rig.shift.copy(p).sub(rig.anchor);
+          rig.position.add(rig.shift);
+          rig.target.add(rig.shift);
+        }
+        rig.anchor.copy(p);
+        rig.anchorValid = true;
+      } else {
+        rig.anchorValid = false;
+      }
       focusPose(app.focus, rig.pose);
       const snap = app.reducedMotion;
       if (snap) {
         rig.position.copy(rig.pose.position);
         rig.target.copy(rig.pose.target);
       } else {
-        dampVec(rig.position, rig.pose.position, 3.4, dt);
-        dampVec(rig.target, rig.pose.target, 3.4, dt);
+        dampVec(rig.position, rig.pose.position, FLIGHT_LAMBDA, dt);
+        dampVec(rig.target, rig.pose.target, FLIGHT_LAMBDA, dt);
       }
       cam.position.copy(rig.position);
       cam.lookAt(rig.target);
-      const span = Math.max(1, rig.pose.position.distanceTo(rig.pose.target));
+      rig.flightLeft -= dt;
+      const span = Math.max(1e-3, rig.pose.position.distanceTo(rig.pose.target));
       const close = rig.position.distanceTo(rig.pose.position) < 0.02 * span;
-      if (controls && (snap || close || state.clock.elapsedTime > rig.flightEnds)) {
+      if (controls && (snap || close || rig.flightLeft <= 0)) {
         rig.handedOver = true;
         const focusBody = app.focus ? BODIES[app.focus] : null;
-        controls.minDistance = focusBody ? focusBody.radius * 1.6 : 12;
+        controls.minDistance = focusBody ? Math.max(focusBody.radius * 1.6, 0.35) : 12;
         controls.maxDistance = 620;
         controls.setLookAt(cam.position.x, cam.position.y, cam.position.z, rig.target.x, rig.target.y, rig.target.z, false);
         controls.enabled = true;

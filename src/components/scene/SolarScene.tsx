@@ -3,7 +3,8 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import * as THREE from "three";
-import { BODIES, BODY_ORDER } from "@/data/bodies";
+import { BODIES, BODY_ORDER, type BodyId } from "@/data/bodies";
+import { positions } from "@/lib/frame";
 import { qualitySettings } from "@/lib/quality";
 import { useApp } from "@/lib/store";
 import { AsteroidBelt } from "./AsteroidBelt";
@@ -62,12 +63,21 @@ export default function SolarScene() {
           stencil: false,
         }}
         camera={{ fov: 38, near: 0.1, far: 1500, position: [-46, 17, 64] }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, camera, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.0;
           gl.setClearColor(new THREE.Color("#04060c"), 1);
           if (process.env.NODE_ENV !== "production") {
-            (window as unknown as { __orrery?: unknown }).__orrery = { gl };
+            // Dev-only handle for the browser checks: renderer stats, camera pose
+            // and live body positions.
+            (window as unknown as { __orrery?: unknown }).__orrery = {
+              gl,
+              camera,
+              scene,
+              positions,
+              focus: () => useApp.getState().focus,
+              setFocus: (id: BodyId | null) => useApp.getState().setFocus(id),
+            };
           }
         }}
       >
@@ -78,7 +88,7 @@ export default function SolarScene() {
         <SpaceDust count={settings.dust} />
         <Sun flares={settings.flares} />
         {PLANETS.map((body) => (
-          <Planet key={body.id} body={body} />
+          <Planet key={body.id} body={body} plumes={settings.plumes} moonPixels={settings.moonPixels} />
         ))}
         <Comet dustCount={settings.cometDust} ionCount={settings.cometIon} />
         <AsteroidBelt count={settings.asteroids} />

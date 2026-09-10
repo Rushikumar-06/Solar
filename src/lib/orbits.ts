@@ -17,6 +17,12 @@ export interface OrbitSpec {
   inclination?: number;
   /** 0 (circle) to 0.95. The parent sits at a focus of the ellipse. */
   eccentricity?: number;
+  /**
+   * Roll of the orbital plane about the z axis, in degrees, applied after the
+   * inclination. Moons use their planet's axial tilt here so they circle its
+   * equator, in the same plane a planet component tilts its rings into.
+   */
+  tiltZ?: number;
 }
 
 export const MAX_ECCENTRICITY = 0.95;
@@ -57,7 +63,14 @@ export function trueAnomaly(eccentricAnomaly: number, eccentricity: number): num
   return 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(half), Math.sqrt(1 - e) * Math.cos(half));
 }
 
-/** Position on a circular or elliptical, optionally inclined orbit whose parent sits at the origin. */
+/**
+ * Position on a circular or elliptical, optionally inclined orbit whose parent
+ * sits at the origin.
+ *
+ * Seen from the north (+y) every orbit runs counterclockwise, which is the way
+ * a positive spin about +y turns a body. The real system works like that: a
+ * planet's year and its day run the same way round, and so do its moons.
+ */
 export function orbitalPosition<T extends Vec3Like>(spec: OrbitSpec, time: number, out: T): T {
   if (spec.orbitRadius === 0) {
     out.x = 0;
@@ -71,16 +84,27 @@ export function orbitalPosition<T extends Vec3Like>(spec: OrbitSpec, time: numbe
   let zPlanar: number;
   if (e === 0) {
     x = Math.cos(M) * spec.orbitRadius;
-    zPlanar = Math.sin(M) * spec.orbitRadius;
+    zPlanar = -Math.sin(M) * spec.orbitRadius;
   } else {
     const nu = trueAnomaly(solveKepler(M, e), e);
     const r = (spec.orbitRadius * (1 - e * e)) / (1 + e * Math.cos(nu));
     x = Math.cos(nu) * r;
-    zPlanar = Math.sin(nu) * r;
+    zPlanar = -Math.sin(nu) * r;
   }
   const inc = (spec.inclination ?? 0) * DEG;
-  out.x = x;
-  out.y = zPlanar * Math.sin(inc);
-  out.z = zPlanar * Math.cos(inc);
+  const y = zPlanar * Math.sin(inc);
+  const z = zPlanar * Math.cos(inc);
+  const roll = (spec.tiltZ ?? 0) * DEG;
+  if (roll === 0) {
+    out.x = x;
+    out.y = y;
+    out.z = z;
+    return out;
+  }
+  const cr = Math.cos(roll);
+  const sr = Math.sin(roll);
+  out.x = x * cr - y * sr;
+  out.y = x * sr + y * cr;
+  out.z = z;
   return out;
 }

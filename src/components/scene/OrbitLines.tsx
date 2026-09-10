@@ -12,6 +12,8 @@ import { useApp } from "@/lib/store";
 const ORBITING = BODY_ORDER.filter((id) => id !== "sun" && id !== "belt");
 const QUIET = 0.075;
 const ACTIVE = 0.3;
+/** A moon ring is small and close, so it reads at a lower opacity than a planet's. */
+const MOON_NEAR = 0.16;
 
 export function OrbitLines() {
   const lines = useMemo(() => {
@@ -54,9 +56,17 @@ export function OrbitLines() {
       app.mode === "explore" ? app.focus : (TOUR_SECTIONS[app.activeSection] as BodyId | undefined) ?? null;
     for (const { id, line, mat } of lines) {
       const body = BODIES[id];
-      if (body.parent) line.position.copy(positions[body.parent]);
-      const target = id === highlighted ? ACTIVE : QUIET;
+      let target: number;
+      if (body.parent) {
+        // Thirteen moon rings would clutter the system view, so they fade in
+        // only around the world the camera is on.
+        line.position.copy(positions[body.parent]);
+        target = id === highlighted ? ACTIVE : highlighted === body.parent ? MOON_NEAR : 0;
+      } else {
+        target = id === highlighted ? ACTIVE : QUIET;
+      }
       mat.opacity = damp(mat.opacity, target, 4, dt);
+      if (body.parent) line.visible = mat.opacity > 0.004;
     }
   });
 

@@ -58,10 +58,19 @@ describe("orbitalPosition (circular)", () => {
     expect(p.y).toBeCloseTo(0, 10);
     expect(p.z).toBeCloseTo(0, 10);
   });
-  it("reaches the +z axis after a quarter period", () => {
+  it("reaches the -z axis after a quarter period", () => {
     const p = orbitalPosition(circle, 25, vec());
     expect(p.x).toBeCloseTo(0, 10);
-    expect(p.z).toBeCloseTo(10, 10);
+    expect(p.z).toBeCloseTo(-10, 10);
+  });
+  it("runs counterclockwise seen from the north, the way the bodies turn", () => {
+    // From +x round to -z is the way a positive spin about +y goes, so a
+    // prograde world's day and its year run the same way. The check is that
+    // the orbit's angular momentum, r cross v, points north.
+    const r = orbitalPosition(circle, 0, vec());
+    const later = orbitalPosition(circle, 0.01, vec());
+    const v = { x: later.x - r.x, y: later.y - r.y, z: later.z - r.z };
+    expect(r.z * v.x - r.x * v.z).toBeGreaterThan(0);
   });
   it("returns to the start after a full period", () => {
     const p = orbitalPosition(circle, 100, vec());
@@ -71,7 +80,7 @@ describe("orbitalPosition (circular)", () => {
   it("lifts out of the plane when inclined", () => {
     const tilted = { ...circle, inclination: 90 };
     const p = orbitalPosition(tilted, 25, vec());
-    expect(p.y).toBeCloseTo(10, 10);
+    expect(p.y).toBeCloseTo(-10, 10);
     expect(p.z).toBeCloseTo(0, 10);
   });
   it("stays at the origin when the orbit radius is zero", () => {
@@ -188,5 +197,53 @@ describe("orbitalPosition (elliptical)", () => {
     expect(p.x).toBeCloseTo(a * (1 - 0.95), 9);
     const n = orbitalPosition({ ...ellipse, eccentricity: -0.5 }, 105, vec());
     expect(len(n)).toBeCloseTo(a, 9);
+  });
+});
+
+describe("orbitalPosition with a tilted plane", () => {
+  const moon = { orbitRadius: 4, orbitPeriod: 60, phase: 0 };
+
+  it("leaves the orbit alone when the tilt is zero or missing", () => {
+    const plain = orbitalPosition(moon, 17, vec());
+    const zero = orbitalPosition({ ...moon, tiltZ: 0 }, 17, vec());
+    expect(zero).toEqual(plain);
+  });
+
+  it("rolls the plane about the z axis, so a quarter turn sends +x to +y", () => {
+    const p = orbitalPosition({ ...moon, tiltZ: 90 }, 0, vec());
+    expect(p.x).toBeCloseTo(0, 9);
+    expect(p.y).toBeCloseTo(4, 9);
+    expect(p.z).toBeCloseTo(0, 9);
+  });
+
+  it("keeps the orbit radius", () => {
+    for (const tiltZ of [26.7, 97.8, 122.5, -40]) {
+      for (let i = 0; i < 8; i++) {
+        expect(len(orbitalPosition({ ...moon, tiltZ }, i * 7, vec()))).toBeCloseTo(4, 9);
+      }
+    }
+  });
+
+  it("applies the roll after the inclination", () => {
+    // Inclination 90 puts the orbit in the xy plane; rolling it 90 degrees about
+    // z then sends the point that was on +x round to +y.
+    const p = orbitalPosition({ ...moon, inclination: 90, tiltZ: 90 }, 15, vec());
+    const before = orbitalPosition({ ...moon, inclination: 90 }, 15, vec());
+    expect(p.x).toBeCloseTo(-before.y, 9);
+    expect(p.y).toBeCloseTo(before.x, 9);
+    expect(p.z).toBeCloseTo(before.z, 9);
+  });
+
+  it("holds an untilted orbit in the plane a planet's rings sit in", () => {
+    // A ring mesh is rotated by the planet's axial tilt about z, so its normal
+    // is Rz(tilt) applied to +y. Every point of a moon orbit sharing that tiltZ
+    // must be perpendicular to it.
+    const tiltZ = 97.8;
+    const rad = (tiltZ * Math.PI) / 180;
+    const normal = { x: -Math.sin(rad), y: Math.cos(rad), z: 0 };
+    for (let i = 0; i < 24; i++) {
+      const p = orbitalPosition({ ...moon, tiltZ, phase: (i / 24) * Math.PI * 2, orbitPeriod: 0 }, 0, vec());
+      expect(p.x * normal.x + p.y * normal.y + p.z * normal.z).toBeCloseTo(0, 9);
+    }
   });
 });

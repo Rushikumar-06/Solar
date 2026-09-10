@@ -47,6 +47,16 @@ describe("qualitySettings for the added effects", () => {
     expect(qualitySettings(1).cometDust).toBeGreaterThan(qualitySettings(0).cometDust);
     expect(qualitySettings(2).cometIon).toBeGreaterThan(qualitySettings(1).cometIon);
   });
+  it("keeps the moon plumes off the lowest tier and scales them up", () => {
+    expect(qualitySettings(0).plumes).toBe(0);
+    expect(qualitySettings(1).plumes).toBeGreaterThan(0);
+    expect(qualitySettings(2).plumes).toBeGreaterThan(qualitySettings(1).plumes);
+  });
+  it("drops moons sooner on weaker tiers", () => {
+    expect(qualitySettings(0).moonPixels).toBeGreaterThan(qualitySettings(1).moonPixels);
+    expect(qualitySettings(1).moonPixels).toBeGreaterThan(qualitySettings(2).moonPixels);
+    expect(qualitySettings(2).moonPixels).toBeGreaterThan(0);
+  });
   it("keeps the lens flare and zodiacal light off the lowest tier", () => {
     expect(qualitySettings(0).extras).toBe(false);
     expect(qualitySettings(2).extras).toBe(true);

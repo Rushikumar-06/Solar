@@ -135,3 +135,76 @@ Requested: better planet visuals, an automatic tour with adjustable speed, and m
   and unoccluded. All three are gated by the quality tier.
 - Tooling. `npm run check:shaders` compiles every registered program headlessly;
   `npm run test:e2e` runs Playwright smoke tests; both are part of the verification bar.
+
+## Round three (2026-09-09, approved in conversation)
+
+Requested: moons for the planets, a few famous ones rather than all of them, at no drop
+in quality and looking like the real thing.
+
+- Roster. Thirteen new moons beside our own: Phobos and Deimos; Io, Europa, Ganymede and
+  Callisto; Mimas, Enceladus and Titan; Miranda and Titania; Triton; Charon. Mercury and
+  Venus genuinely have none and their panel says so rather than inventing any.
+- Orbits. `OrbitSpec` gains `tiltZ`, a roll of the orbital plane about the z axis applied
+  after the inclination. Every moon takes its planet's axial tilt there, so each system
+  sits in its planet's equatorial plane: Saturn's moons run with the rings, and Uranus's
+  circle it like a bullseye. Our own Moon keeps its 5 degree ecliptic inclination instead.
+  Triton runs retrograde; Charon's period equals Pluto's day, so the pair are locked.
+  Every moon is tidally locked, rotation period equal to orbital period.
+- Looks. `shaders/moons.ts` holds four new programs. `MOON_FRAG` is one cratered rock and
+  ice shader whose named features are switched on per body: great impact basins with rims,
+  central peaks and outer rings (Herschel, Valhalla, Stickney), grooved provinces and
+  two-tone terrain (Ganymede), Europa's linea drawn where a noise field crosses zero,
+  Enceladus's tiger stripes, Miranda's coronae, rift canyons (Titania, Charon), Triton's
+  cantaloupe terrain, polar frost and geyser streaks, and Charon's stained pole.
+  `IRREGULAR_VERT` stretches and knocks the sphere out of shape for Phobos and Deimos,
+  taking the normal from the displaced surface while the fragment shader still lays its
+  craters out on the undisplaced direction. `IO_FRAG` is sulphur, frost and volcanic
+  paterae that glow through the night side. `TITAN_FRAG` is haze: a wrapped terminator,
+  limb scattering and a thicker atmosphere shell set by `params.atmoScale`.
+  `PLUME_VERT/FRAG` draws Enceladus's south polar jets and Io's fountains as ballistic
+  points, faded out until the moon is large enough on screen to see them.
+- Budget. A moon is not drawn at all below a pixel or so across (three pixels on the
+  lowest tier), and moon orbit rings fade in only around the world the camera is on, so
+  the system overview costs close to what it did before and only a visit pays for a moon.
+  A flight is budgeted in damped seconds rather than wall time and damps in the target's
+  own moving frame, so the camera arrives at the intended framing even on a slow device
+  and even when the moon it is chasing is quick.
+- Navigation. The dock stays a list of primaries; the story panel grows a row of moon
+  chips (and, on a moon, a chip back to its planet) in both tour and explore. Arrow keys
+  step through planets, carrying on from a moon's planet.
+
+## Round four (2026-09-10, approved in conversation)
+
+Requested: rotation axes as they are in the real world, Mercury and the Moon are not
+right, and Earth should show the real map.
+
+- Direction. `orbitalPosition` now runs every orbit counterclockwise seen from the north,
+  which is the way a positive spin about +y turns a body. Before this the two ran opposite
+  ways, so a tidally locked moon turned twice a month relative to its planet instead of
+  standing still. Bodies tipped past upright (Venus at 177 degrees, Uranus at 98, Pluto at
+  123) spell their backwards spin out in the tilt alone: pairing that with a negative
+  period, as the NASA fact sheets do, quietly cancelled it back to forwards.
+- Axes. `lib/spin.ts` gives each body the lean of its spin axis and how far it has turned.
+  A planet leans by its axial tilt, in a direction fixed in space, which is what gives it
+  seasons. A moon spins about the normal of its own orbit, so Saturn's moons stand square
+  to the rings and Uranus's lie on their sides with the planet, and its axial tilt is
+  measured from that plane. Our Moon's 6.7 degrees from its orbit and 5 of inclination
+  leave it 1.7 degrees off the ecliptic, as the real one is.
+- Locking. `tidalLock` names the body a world holds one face toward. A locked body's spin
+  is read straight off its orbit angle rather than counted out separately, so object-space
+  +x, the middle of its map, stays on its partner forever. Pluto is locked back to Charon,
+  which its copy already promised. The near side wanders by the moon's own tilt and no
+  further, which is the libration that lets us see a little past the edge of ours.
+- Real maps. Earth, the Moon and Mercury are the three worlds a visitor can check by eye,
+  so they take their geography from small public-domain maps in `public/maps` fetched and
+  shrunk by `scripts/build-maps.py`: Blue Marble and its land mask for Earth, the LRO
+  albedo for the Moon, the MESSENGER mosaic for Mercury. 145 kB in total, no extra draw
+  calls, and the rest of the system stays entirely procedural.
+- What the maps do and do not carry. `MAP_GLSL` samples them equirectangularly from the
+  object-space direction, taking its gradients from a shifted copy of the coordinate so
+  the meridian behind the body does not throw mip selection off. Earth's mask is pulled
+  back to a crisp coastline over a little noise, and a coarse mip of the same mask gives
+  the depth of the sea and gathers the city lights onto the coasts. On the Moon and
+  Mercury the map's albedo stands in for the invented height field the colour was ramped
+  from, while the procedural craters go on supplying the relief, and a mapped moon's dark
+  plains flatten out because flood basalt is smooth.
